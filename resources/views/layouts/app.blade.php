@@ -30,10 +30,10 @@
 <div class="d-flex">
     <nav class="sidebar offcanvas-lg offcanvas-start d-flex flex-column p-2 no-print" tabindex="-1" id="sidebarMenu">
         <div class="d-flex justify-content-between align-items-center d-lg-none px-2 pt-2">
-            <span class="text-white fw-bold"><i class="bi bi-basket3-fill"></i> Grocery POS</span>
+            <span class="text-white fw-bold"><i class="bi bi-shop-window"></i> Grocery POS</span>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
         </div>
-        <div class="brand d-none d-lg-block"><i class="bi bi-basket3-fill"></i> Grocery POS</div>
+        <div class="brand d-none d-lg-block"><i class="bi bi-shop-window"></i> Grocery POS</div>
         <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
         <a href="{{ route('pos.index') }}" class="{{ request()->routeIs('pos.*') ? 'active' : '' }}"><i class="bi bi-upc-scan me-2"></i>POS Checkout</a>
         <a href="{{ route('sales.index') }}" class="{{ request()->routeIs('sales.*') ? 'active' : '' }}"><i class="bi bi-receipt me-2"></i>Sales History</a>
@@ -42,7 +42,7 @@
         <div class="mt-auto">
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button class="btn btn-sm btn-outline-light w-100 mx-2" style="width:calc(100% - 1rem)"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
+                <button class="btn btn-sm btn-outline-light mx-2" style="width:calc(100% - 1rem); padding:8px 12px; font-size:14px;"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
             </form>
         </div>
     </nav>
