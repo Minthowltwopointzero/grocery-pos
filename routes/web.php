@@ -33,6 +33,9 @@ Route::middleware('auth')->group(function () {
     // (this also includes product management except delete, and viewing the
     // customer list + credit ledger + recording payments)
     Route::middleware('role:admin,cashier')->group(function () {
+        Route::get('/products/bulk-upload', [ProductController::class, 'bulkUploadForm'])->name('products.bulk-upload.form');
+        Route::post('/products/bulk-upload', [ProductController::class, 'bulkUpload'])->name('products.bulk-upload.store');
+        Route::get('/products/bulk-upload/template', [ProductController::class, 'bulkUploadTemplate'])->name('products.bulk-upload.template');
         Route::resource('products', ProductController::class)->except(['show', 'destroy']);
 
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');

@@ -9,7 +9,10 @@
             <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search barcode or name" value="{{ request('search') }}">
             <button class="btn btn-sm btn-secondary">Search</button>
         </form>
-        <a href="{{ route('products.create') }}" class="btn btn-dark btn-sm"><i class="bi bi-plus-lg"></i> Add Product</a>
+        <div>
+            <a href="{{ route('products.bulk-upload.form') }}" class="btn btn-outline-dark btn-sm"><i class="bi bi-upload"></i> Bulk Upload</a>
+            <a href="{{ route('products.create') }}" class="btn btn-dark btn-sm"><i class="bi bi-plus-lg"></i> Add Product</a>
+        </div>
     </div>
 
     <div class="table-responsive">
