@@ -11,7 +11,7 @@ class LoginController extends Controller
     public function showLoginForm()
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->route(Auth::user()->isAdmin() ? 'dashboard' : 'pos.index');
         }
 
         return view('auth.login');
@@ -32,7 +32,11 @@ class LoginController extends Controller
                 return back()->withErrors(['username' => 'This account has been deactivated.']);
             }
 
-            return redirect()->intended(route('dashboard'));
+            // Admins land on the Dashboard; cashiers go straight to POS
+            // Checkout since Dashboard/Sales History are admin-only.
+            $defaultRoute = Auth::user()->isAdmin() ? 'dashboard' : 'pos.index';
+
+            return redirect()->intended(route($defaultRoute));
         }
 
         return back()->withErrors([

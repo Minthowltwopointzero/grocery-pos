@@ -99,11 +99,37 @@ class ProductController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
+    // Simpler template for Restock Mode - only barcode + stock_quantity needed
+    public function bulkUploadRestockTemplate()
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="products_restock_template.csv"',
+        ];
+
+        $columns = ['barcode', 'stock_quantity'];
+
+        $callback = function () use ($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            fputcsv($file, ['17579', '30']);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function bulkUpload(Request $request)
     {
         $request->validate([
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
         ]);
+
+        // When checked, the uploaded stock_quantity is ADDED to whatever
+        // stock the product already has (restock mode), instead of
+        // replacing it outright. Useful for restocking existing products
+        // without needing to calculate the new total yourself.
+        $addToStock = $request->boolean('add_to_stock');
 
         $path = $request->file('csv_file')->getRealPath();
         $handle = fopen($path, 'r');
@@ -122,7 +148,14 @@ class ProductController extends Controller
         }
 
         $header = array_map(fn ($h) => strtolower(trim($h)), $header);
-        $required = ['barcode', 'name', 'cash_price', 'credit_price', 'stock_quantity'];
+
+        // In Restock Mode, you're only adding quantity to products that
+        // already exist, so we only strictly require barcode + stock_quantity.
+        // In normal mode (replace/create), the full set of fields is required
+        // since a brand-new product needs a name and prices to be created.
+        $required = $addToStock
+            ? ['barcode', 'stock_quantity']
+            : ['barcode', 'name', 'cash_price', 'credit_price', 'stock_quantity'];
         $missing = array_diff($required, $header);
 
         if (! empty($missing)) {
@@ -154,8 +187,43 @@ class ProductController extends Controller
             $stockQuantity = $data['stock_quantity'] ?? null;
             $expirationDate = trim((string) ($data['expiration_date'] ?? ''));
 
+            $existing = Product::where('barcode', $barcode)->first();
+
+            // Restock mode + existing product: only barcode + stock_quantity matter.
+            // Name/prices are optional here — if left blank, keep whatever the
+            // product already has instead of requiring you to retype them.
+            if ($addToStock && $existing) {
+                if ($barcode === '' || ! is_numeric($stockQuantity)) {
+                    $rowErrors[] = "Row {$rowNumber}: missing or invalid barcode/stock_quantity.";
+                    continue;
+                }
+
+                $parsedExpiration = $existing->expiration_date?->format('Y-m-d');
+                if ($expirationDate !== '') {
+                    try {
+                        $parsedExpiration = \Carbon\Carbon::parse($expirationDate)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $rowErrors[] = "Row {$rowNumber}: expiration date \"{$expirationDate}\" could not be understood, left unchanged.";
+                    }
+                }
+
+                $existing->update([
+                    'name' => $name !== '' ? $name : $existing->name,
+                    'cash_price' => is_numeric($cashPrice) ? (float) $cashPrice : $existing->cash_price,
+                    'credit_price' => is_numeric($creditPrice) ? (float) $creditPrice : $existing->credit_price,
+                    'stock_quantity' => $existing->stock_quantity + (int) $stockQuantity,
+                    'expiration_date' => $parsedExpiration,
+                ]);
+                $updated++;
+                continue;
+            }
+
+            // Normal mode, OR restock mode but this barcode doesn't exist yet
+            // (a genuinely new product still needs full details to be created).
             if ($barcode === '' || $name === '' || ! is_numeric($cashPrice) || ! is_numeric($creditPrice) || ! is_numeric($stockQuantity)) {
-                $rowErrors[] = "Row {$rowNumber}: missing or invalid data (check barcode, name, prices, stock).";
+                $rowErrors[] = $addToStock
+                    ? "Row {$rowNumber}: barcode \"{$barcode}\" not found yet — creating a new product needs name, cash_price, and credit_price too, not just stock_quantity."
+                    : "Row {$rowNumber}: missing or invalid data (check barcode, name, prices, stock).";
                 continue;
             }
 
@@ -168,13 +236,13 @@ class ProductController extends Controller
                 }
             }
 
-            $existing = Product::where('barcode', $barcode)->first();
+            $finalStock = (int) $stockQuantity;
 
             $payload = [
                 'name' => $name,
                 'cash_price' => (float) $cashPrice,
                 'credit_price' => (float) $creditPrice,
-                'stock_quantity' => (int) $stockQuantity,
+                'stock_quantity' => $finalStock,
                 'expiration_date' => $parsedExpiration,
             ];
 
@@ -189,7 +257,9 @@ class ProductController extends Controller
 
         fclose($handle);
 
-        return redirect()->route('products.index')->with('success', "Bulk upload complete: {$created} added, {$updated} updated.")
+        $modeNote = $addToStock ? ' (stock quantities were added to existing totals)' : '';
+
+        return redirect()->route('products.index')->with('success', "Bulk upload complete: {$created} added, {$updated} updated{$modeNote}.")
             ->with('bulkUploadErrors', $rowErrors);
     }
 

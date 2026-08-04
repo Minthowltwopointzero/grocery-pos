@@ -8,7 +8,14 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('dashboard'));
+Route::get('/', function () {
+    if (auth()->check()) {
+        return auth()->user()->isAdmin()
+            ? redirect()->route('dashboard')
+            : redirect()->route('pos.index');
+    }
+    return redirect()->route('login');
+});
 
 // Guest routes
 Route::middleware('guest')->group(function () {
@@ -20,11 +27,19 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Admin-only management: creating, editing, deleting customers
     // + deleting products (cashiers can add/edit but not delete products)
+    // + Dashboard + Sales History (cashiers no longer see these)
     Route::middleware('role:admin')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
+        Route::get('/sales/{sale}/receipt', [SaleController::class, 'show'])->name('sales.receipt');
+
+        Route::get('/customers/bulk-upload', [CustomerController::class, 'bulkUploadForm'])->name('customers.bulk-upload.form');
+        Route::post('/customers/bulk-upload', [CustomerController::class, 'bulkUpload'])->name('customers.bulk-upload.store');
+        Route::get('/customers/bulk-upload/template', [CustomerController::class, 'bulkUploadTemplate'])->name('customers.bulk-upload.template');
         Route::resource('customers', CustomerController::class)->except(['show', 'index']);
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     });
@@ -36,14 +51,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/products/bulk-upload', [ProductController::class, 'bulkUploadForm'])->name('products.bulk-upload.form');
         Route::post('/products/bulk-upload', [ProductController::class, 'bulkUpload'])->name('products.bulk-upload.store');
         Route::get('/products/bulk-upload/template', [ProductController::class, 'bulkUploadTemplate'])->name('products.bulk-upload.template');
+        Route::get('/products/bulk-upload/restock-template', [ProductController::class, 'bulkUploadRestockTemplate'])->name('products.bulk-upload.restock-template');
         Route::resource('products', ProductController::class)->except(['show', 'destroy']);
 
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
         Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
         Route::get('/api/products/lookup', [ProductController::class, 'findByBarcode'])->name('products.lookup');
-
-        Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
-        Route::get('/sales/{sale}/receipt', [SaleController::class, 'show'])->name('sales.receipt');
 
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
