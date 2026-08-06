@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,6 +33,8 @@ class LoginController extends Controller
                 return back()->withErrors(['username' => 'This account has been deactivated.']);
             }
 
+            AuditLogger::log('login', 'Logged in as ' . Auth::user()->username);
+
             // Admins land on the Dashboard; cashiers go straight to POS
             // Checkout since Dashboard/Sales History are admin-only.
             $defaultRoute = Auth::user()->isAdmin() ? 'dashboard' : 'pos.index';
@@ -46,6 +49,10 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        if (Auth::check()) {
+            AuditLogger::log('logout', 'Logged out (' . Auth::user()->username . ')');
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

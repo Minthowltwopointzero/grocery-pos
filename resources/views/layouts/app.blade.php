@@ -43,10 +43,13 @@
         @endif
         <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'active' : '' }}"><i class="bi bi-box-seam me-2"></i>Products</a>
         <a href="{{ route('customers.index') }}" class="{{ request()->routeIs('customers.*') ? 'active' : '' }}"><i class="bi bi-people me-2"></i>Customers / Credit</a>
+        @if(auth()->user()?->isAdmin())
+            <a href="{{ route('audit-logs.index') }}" class="{{ request()->routeIs('audit-logs.*') ? 'active' : '' }}"><i class="bi bi-clock-history me-2"></i>Audit Log</a>
+        @endif
         <div class="mt-auto">
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button class="btn btn-sm btn-outline-light w-100 mx-2" style="width:calc(100% - 1rem)"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
+                <button class="btn btn-sm btn-outline-light mx-2" style="width:calc(100% - 1rem); padding:8px 12px; font-size:14px;"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
             </form>
         </div>
     </nav>

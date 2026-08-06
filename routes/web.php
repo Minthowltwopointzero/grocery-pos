@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -30,12 +31,14 @@ Route::middleware('auth')->group(function () {
 
     // Admin-only management: creating, editing, deleting customers
     // + deleting products (cashiers can add/edit but not delete products)
-    // + Dashboard + Sales History (cashiers no longer see these)
+    // + Dashboard + Sales History + Audit Log (cashiers no longer see these)
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
         Route::get('/sales/{sale}/receipt', [SaleController::class, 'show'])->name('sales.receipt');
+
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
         Route::get('/customers/bulk-upload', [CustomerController::class, 'bulkUploadForm'])->name('customers.bulk-upload.form');
         Route::post('/customers/bulk-upload', [CustomerController::class, 'bulkUpload'])->name('customers.bulk-upload.store');

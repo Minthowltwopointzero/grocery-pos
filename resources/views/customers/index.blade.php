@@ -10,7 +10,10 @@
             <button class="btn btn-sm btn-secondary">Search</button>
         </form>
         @if(auth()->user()->isAdmin())
-            <a href="{{ route('customers.create') }}" class="btn btn-dark btn-sm"><i class="bi bi-plus-lg"></i> Add Customer</a>
+            <div>
+                <a href="{{ route('customers.bulk-upload.form') }}" class="btn btn-outline-dark btn-sm"><i class="bi bi-upload"></i> Bulk Upload</a>
+                <a href="{{ route('customers.create') }}" class="btn btn-dark btn-sm"><i class="bi bi-plus-lg"></i> Add Customer</a>
+            </div>
         @endif
     </div>
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -39,7 +40,9 @@ class ProductController extends Controller
             'expiration_date' => ['nullable', 'date'],
         ]);
 
-        Product::create($validated);
+        $product = Product::create($validated);
+
+        AuditLogger::log('product_created', "Product created: {$product->name} (barcode {$product->barcode})");
 
         return redirect()->route('products.index')->with('success', 'Product added successfully.');
     }
@@ -62,14 +65,29 @@ class ProductController extends Controller
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
+        $changes = [];
+        foreach (['name', 'cash_price', 'credit_price', 'stock_quantity'] as $field) {
+            if ((string) $product->{$field} !== (string) $validated[$field]) {
+                $changes[] = "{$field}: {$product->{$field}} → {$validated[$field]}";
+            }
+        }
+
         $product->update($validated);
+
+        $changeSummary = $changes ? implode(', ', $changes) : 'no field changes';
+        AuditLogger::log('product_updated', "Product updated: {$product->name} (barcode {$product->barcode}) — {$changeSummary}");
 
         return redirect()->route('products.index')->with('success', 'Product updated successfully.');
     }
 
     public function destroy(Product $product)
     {
+        $name = $product->name;
+        $barcode = $product->barcode;
+
         $product->delete();
+
+        AuditLogger::log('product_deleted', "Product deleted: {$name} (barcode {$barcode})");
 
         return redirect()->route('products.index')->with('success', 'Product deleted.');
     }
@@ -257,9 +275,12 @@ class ProductController extends Controller
 
         fclose($handle);
 
-        $modeNote = $addToStock ? ' (stock quantities were added to existing totals)' : '';
+        $modeNote = $addToStock ? ' (restock mode: quantities added to existing totals)' : '';
+        $summary = "Bulk upload complete: {$created} added, {$updated} updated{$modeNote}.";
 
-        return redirect()->route('products.index')->with('success', "Bulk upload complete: {$created} added, {$updated} updated{$modeNote}.")
+        AuditLogger::log('product_bulk_upload', $summary);
+
+        return redirect()->route('products.index')->with('success', $summary)
             ->with('bulkUploadErrors', $rowErrors);
     }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\CreditPayment;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,10 +24,10 @@ class CustomerController extends Controller
         return view('customers.index', compact('customers'));
     }
 
-   public function create()
-{
-      return view('customers.create');
-}
+    public function create()
+    {
+        return view('customers.create');
+    }
 
     public function store(Request $request)
     {
@@ -35,7 +36,9 @@ class CustomerController extends Controller
             'office' => ['nullable', 'string', 'max:255'],
         ]);
 
-        Customer::create($validated);
+        $customer = Customer::create($validated);
+
+        AuditLogger::log('customer_created', "Customer created: {$customer->name}" . ($customer->office ? " ({$customer->office})" : ''));
 
         return redirect()->route('customers.index')->with('success', 'Customer added successfully.');
     }
@@ -52,16 +55,111 @@ class CustomerController extends Controller
             'office' => ['nullable', 'string', 'max:255'],
         ]);
 
+        $oldName = $customer->name;
         $customer->update($validated);
+
+        AuditLogger::log('customer_updated', "Customer updated: {$oldName} → {$customer->name}");
 
         return redirect()->route('customers.index')->with('success', 'Customer updated successfully.');
     }
 
     public function destroy(Customer $customer)
     {
+        $name = $customer->name;
+        $balance = $customer->balance;
+
         $customer->delete();
 
+        AuditLogger::log('customer_deleted', "Customer deleted: {$name} (balance at time of deletion: ₱" . number_format($balance, 2) . ")");
+
         return redirect()->route('customers.index')->with('success', 'Customer deleted.');
+    }
+
+    public function bulkUploadForm()
+    {
+        return view('customers.bulk-upload');
+    }
+
+    // Lets the user download a blank CSV with the correct headers to fill in
+    public function bulkUploadTemplate()
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="customers_template.csv"',
+        ];
+
+        $columns = ['name', 'office'];
+
+        $callback = function () use ($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            fputcsv($file, ['Juan Dela Cruz', 'Accounting Office']);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function bulkUpload(Request $request)
+    {
+        $request->validate([
+            'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $path = $request->file('csv_file')->getRealPath();
+        $handle = fopen($path, 'r');
+
+        if (! $handle) {
+            return back()->withErrors(['csv_file' => 'Could not read the uploaded file.']);
+        }
+
+        $header = fgetcsv($handle);
+        if (! $header) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'The file appears to be empty.']);
+        }
+
+        $header = array_map(fn ($h) => strtolower(trim($h)), $header);
+
+        if (! in_array('name', $header, true)) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'Missing required column: name. Please use the template.']);
+        }
+
+        $created = 0;
+        $rowErrors = [];
+        $rowNumber = 1; // header was row 1
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowNumber++;
+
+            if (count(array_filter($row, fn ($v) => trim((string) $v) !== '')) === 0) {
+                continue; // skip blank lines
+            }
+
+            $data = array_combine($header, array_pad($row, count($header), null));
+            $name = trim((string) ($data['name'] ?? ''));
+            $office = trim((string) ($data['office'] ?? ''));
+
+            if ($name === '') {
+                $rowErrors[] = "Row {$rowNumber}: missing customer name, skipped.";
+                continue;
+            }
+
+            Customer::create([
+                'name' => $name,
+                'office' => $office !== '' ? $office : null,
+            ]);
+            $created++;
+        }
+
+        fclose($handle);
+
+        $summary = "Bulk upload complete: {$created} customer(s) added.";
+        AuditLogger::log('customer_bulk_upload', $summary);
+
+        return redirect()->route('customers.index')->with('success', $summary)
+            ->with('bulkUploadErrors', $rowErrors);
     }
 
     // Credit tracking page: balance + full history of sales & payments
@@ -96,6 +194,11 @@ class CustomerController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
         });
+
+        AuditLogger::log(
+            'credit_payment_recorded',
+            "Credit payment of ₱" . number_format($validated['amount'], 2) . " recorded for {$customer->name} (remaining balance: ₱" . number_format($customer->balance, 2) . ")"
+        );
 
         return redirect()->route('customers.show', $customer)->with('success', 'Payment recorded successfully.');
     }
