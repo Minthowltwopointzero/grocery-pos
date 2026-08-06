@@ -15,7 +15,12 @@ class DashboardController extends Controller
         $todayTransactions = Sale::whereDate('created_at', today())->count();
         $lowStockCount = Product::where('is_active', true)->whereColumn('stock_quantity', '<=', DB::raw(10))->count();
         $totalCreditOutstanding = Customer::sum('balance');
-        $lowStockProducts = Product::where('is_active', true)->where('stock_quantity', '<=', 10)->orderBy('stock_quantity')->limit(10)->get();
+
+        // Show ALL low-stock products (no artificial cap) so the count above
+        // always matches what's listed below. The list is wrapped in a
+        // scrollable box in the view if it gets long.
+        $lowStockProducts = Product::where('is_active', true)->where('stock_quantity', '<=', 10)->orderBy('stock_quantity')->get();
+
         $recentSales = Sale::with(['user', 'customer'])->latest()->limit(8)->get();
 
         $expiringSoonProducts = Product::where('is_active', true)
@@ -23,14 +28,12 @@ class DashboardController extends Controller
             ->whereDate('expiration_date', '>=', today())
             ->whereDate('expiration_date', '<=', now()->addDays(30))
             ->orderBy('expiration_date')
-            ->limit(10)
             ->get();
 
         $expiredProducts = Product::where('is_active', true)
             ->whereNotNull('expiration_date')
             ->whereDate('expiration_date', '<', today())
             ->orderBy('expiration_date')
-            ->limit(10)
             ->get();
 
         return view('dashboard', compact(
