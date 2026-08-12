@@ -7,7 +7,12 @@
     <div class="col-md-7">
         <div class="card p-3 mb-3">
             <label class="form-label fw-semibold small">Scan Barcode / Enter Manually</label>
-            <input type="text" id="barcodeInput" class="form-control form-control-lg" placeholder="Scan or type barcode, then press Enter" autofocus>
+            <div class="d-flex gap-2">
+                <input type="text" id="barcodeInput" class="form-control form-control-lg" placeholder="Scan or type barcode, then press Enter">
+                <button type="button" id="openCameraBtn" class="btn btn-outline-dark" title="Scan using webcam (temporary, while you don't have a physical scanner)">
+                    <i class="bi bi-camera-fill"></i> <span class="d-none d-md-inline">Scan with Camera</span>
+                </button>
+            </div>
             <div id="scanFeedback" class="small mt-2"></div>
         </div>
 
@@ -65,9 +70,27 @@
         </div>
     </div>
 </div>
+
+<!-- Camera Scan Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title"><i class="bi bi-camera-fill me-1"></i> Scan with Webcam</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" id="closeCameraBtn"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="cameraNotSupported" class="alert alert-warning small" style="display:none;"></div>
+                <div id="reader" style="width:100%;"></div>
+                <div class="small text-muted mt-2">Hold the barcode steady in front of the camera, well-lit if possible.</div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 let cart = []; // { product_id, barcode, name, cash_price, credit_price, quantity, stock_quantity }
 
@@ -81,6 +104,38 @@ const checkoutBtn = document.getElementById('checkoutBtn');
 const customerSelect = document.getElementById('customerSelect');
 const creditFields = document.getElementById('creditFields');
 const cashFields = document.getElementById('cashFields');
+
+// ===== Scan sound feedback (generated in-browser, no audio file needed) =====
+let audioCtx = null;
+function playBeep(frequency, durationMs, type = 'sine') {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = type;
+        oscillator.frequency.value = frequency;
+        gainNode.gain.value = 0.15; // keep it gentle, not jarring
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + durationMs / 1000);
+    } catch (e) {
+        // audio not available (e.g. blocked by browser) - fail silently
+    }
+}
+function playSuccessBeep() {
+    playBeep(1000, 120); // short, high-pitched "success" beep like a real scanner
+}
+function playErrorBeep() {
+    playBeep(220, 250, 'square'); // lower, buzzer-like tone for "not found"
+}
+function playWarningBeep() {
+    // two quick beeps for expired/expiring-soon items
+    playBeep(700, 100);
+    setTimeout(() => playBeep(700, 100), 150);
+}
 
 function currentPaymentType() {
     return document.querySelector('input[name="paymentType"]:checked').value;
@@ -170,7 +225,7 @@ document.querySelectorAll('input[name="paymentType"]').forEach(radio => {
     });
 });
 
-// Barcode scanner: USB scanners act as a keyboard, typing fast then hitting Enter
+// Barcode scanner (physical, USB): acts as a keyboard, typing fast then hitting Enter
 barcodeInput.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
         e.preventDefault();
@@ -193,9 +248,13 @@ function lookupProduct(barcode) {
         if (status !== 200 || !data.found) {
             scanFeedback.textContent = 'Product not found for barcode: ' + barcode;
             scanFeedback.className = 'small mt-2 text-danger';
+            playErrorBeep();
+            barcodeInput.focus();
             return;
         }
+
         if (data.product.is_expired) {
+            playWarningBeep();
             const proceed = confirm(data.product.name + ' is EXPIRED (expired ' + data.product.expiration_date + '). Add to cart anyway?');
             if (!proceed) {
                 scanFeedback.textContent = 'Skipped expired item: ' + data.product.name;
@@ -210,14 +269,18 @@ function lookupProduct(barcode) {
         } else if (data.product.is_expiring_soon) {
             scanFeedback.textContent = 'Added (expiring ' + data.product.expiration_date + '): ' + data.product.name;
             scanFeedback.className = 'small mt-2 text-warning';
+            playWarningBeep();
         } else {
             scanFeedback.textContent = 'Added: ' + data.product.name;
             scanFeedback.className = 'small mt-2 text-success';
+            playSuccessBeep();
         }
+        barcodeInput.focus(); // always return focus here so the next scan works immediately
     })
     .catch(() => {
         scanFeedback.textContent = 'Lookup failed. Check connection.';
         scanFeedback.className = 'small mt-2 text-danger';
+        barcodeInput.focus();
     });
 }
 
@@ -310,5 +373,75 @@ checkoutBtn.addEventListener('click', function () {
 });
 
 barcodeInput.focus();
+
+// ===== Webcam Barcode Scanning (temporary backup while no physical scanner) =====
+// Uses the html5-qrcode library (loaded via CDN above) instead of the browser's
+// native BarcodeDetector API, since Brave and some other browsers strip that
+// native API out for privacy reasons. This library works consistently across
+// Chrome, Brave, Edge, and Firefox.
+//
+// This is entirely OPTIONAL and separate from the physical scanner flow above —
+// once you have a real USB scanner, you simply stop clicking this button and use
+// the barcode text box as normal. No code changes needed to "switch back."
+
+const openCameraBtn = document.getElementById('openCameraBtn');
+const cameraModalEl = document.getElementById('cameraModal');
+const cameraModal = new bootstrap.Modal(cameraModalEl);
+const cameraNotSupported = document.getElementById('cameraNotSupported');
+let html5QrCode = null;
+let cameraRunning = false;
+
+openCameraBtn.addEventListener('click', async function () {
+    cameraModal.show();
+    cameraNotSupported.style.display = 'none';
+
+    if (typeof Html5Qrcode === 'undefined') {
+        cameraNotSupported.textContent = 'Camera scanning library failed to load. Check your internet connection, or just type the barcode manually.';
+        cameraNotSupported.style.display = 'block';
+        return;
+    }
+
+    try {
+        html5QrCode = new Html5Qrcode('reader', {
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.CODABAR,
+                Html5QrcodeSupportedFormats.ITF,
+            ],
+            verbose: false,
+        });
+        await html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 15, qrbox: { width: 300, height: 160 } },
+            (decodedText) => {
+                stopCamera();
+                cameraModal.hide();
+                lookupProduct(decodedText);
+            },
+            () => { /* per-frame "not found yet" - ignore, keeps scanning */ }
+        );
+        cameraRunning = true;
+    } catch (err) {
+        cameraNotSupported.textContent = 'Could not access the camera. Please allow camera permission in your browser and try again.';
+        cameraNotSupported.style.display = 'block';
+    }
+});
+
+function stopCamera() {
+    if (html5QrCode && cameraRunning) {
+        html5QrCode.stop().catch(() => {});
+        cameraRunning = false;
+    }
+}
+
+cameraModalEl.addEventListener('hidden.bs.modal', function () {
+    stopCamera();
+    barcodeInput.focus();
+});
 </script>
 @endpush
