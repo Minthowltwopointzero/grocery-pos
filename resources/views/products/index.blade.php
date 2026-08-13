@@ -49,6 +49,7 @@
                     @endif
                 </td>
                 <td class="text-end">
+                    <a href="{{ route('products.label', $product) }}" class="btn btn-sm btn-outline-dark" title="Print barcode label"><i class="bi bi-upc"></i></a>
                     <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                     @if(auth()->user()->isAdmin())
                         <form action="{{ route('products.destroy', $product) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this product?')">

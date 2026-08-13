@@ -29,10 +29,22 @@ class ProductController extends Controller
         return view('products.create');
     }
 
+    // Generates a unique internal barcode for products with no manufacturer
+    // barcode (e.g. loose rice, garlic, or other items sold by weight/count
+    // that don't come with a printed barcode). Format: GP + 7-digit number.
+    private function generateInternalBarcode(): string
+    {
+        do {
+            $candidate = 'GP' . str_pad((string) random_int(1, 9999999), 7, '0', STR_PAD_LEFT);
+        } while (Product::where('barcode', $candidate)->exists());
+
+        return $candidate;
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'barcode' => ['required', 'string', 'unique:products,barcode'],
+            'barcode' => ['nullable', 'string', 'unique:products,barcode'],
             'name' => ['required', 'string', 'max:255'],
             'cash_price' => ['required', 'numeric', 'min:0'],
             'credit_price' => ['required', 'numeric', 'min:0'],
@@ -40,11 +52,21 @@ class ProductController extends Controller
             'expiration_date' => ['nullable', 'date'],
         ]);
 
+        $generatedBarcode = false;
+        if (empty($validated['barcode'])) {
+            $validated['barcode'] = $this->generateInternalBarcode();
+            $generatedBarcode = true;
+        }
+
         $product = Product::create($validated);
 
-        AuditLogger::log('product_created', "Product created: {$product->name} (barcode {$product->barcode})");
+        AuditLogger::log('product_created', "Product created: {$product->name} (barcode {$product->barcode})" . ($generatedBarcode ? ' [auto-generated internal barcode]' : ''));
 
-        return redirect()->route('products.index')->with('success', 'Product added successfully.');
+        $message = $generatedBarcode
+            ? "Product added successfully. Internal barcode {$product->barcode} was generated — print a label for it below."
+            : 'Product added successfully.';
+
+        return redirect()->route('products.index')->with('success', $message);
     }
 
     public function edit(Product $product)
@@ -90,6 +112,13 @@ class ProductController extends Controller
         AuditLogger::log('product_deleted', "Product deleted: {$name} (barcode {$barcode})");
 
         return redirect()->route('products.index')->with('success', 'Product deleted.');
+    }
+
+    // Printable barcode label (for products with an auto-generated internal
+    // barcode, or any product you want a sticker for).
+    public function label(Product $product)
+    {
+        return view('products.label', compact('product'));
     }
 
     public function bulkUploadForm()
@@ -143,10 +172,6 @@ class ProductController extends Controller
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
         ]);
 
-        // When checked, the uploaded stock_quantity is ADDED to whatever
-        // stock the product already has (restock mode), instead of
-        // replacing it outright. Useful for restocking existing products
-        // without needing to calculate the new total yourself.
         $addToStock = $request->boolean('add_to_stock');
 
         $path = $request->file('csv_file')->getRealPath();
@@ -156,9 +181,6 @@ class ProductController extends Controller
             return back()->withErrors(['csv_file' => 'Could not read the uploaded file.']);
         }
 
-        // Read header row and figure out which column is which
-        // (order doesn't have to match the template exactly, as long as the
-        // column names match)
         $header = fgetcsv($handle);
         if (! $header) {
             fclose($handle);
@@ -167,10 +189,6 @@ class ProductController extends Controller
 
         $header = array_map(fn ($h) => strtolower(trim($h)), $header);
 
-        // In Restock Mode, you're only adding quantity to products that
-        // already exist, so we only strictly require barcode + stock_quantity.
-        // In normal mode (replace/create), the full set of fields is required
-        // since a brand-new product needs a name and prices to be created.
         $required = $addToStock
             ? ['barcode', 'stock_quantity']
             : ['barcode', 'name', 'cash_price', 'credit_price', 'stock_quantity'];
@@ -186,12 +204,11 @@ class ProductController extends Controller
         $created = 0;
         $updated = 0;
         $rowErrors = [];
-        $rowNumber = 1; // header was row 1
+        $rowNumber = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
             $rowNumber++;
 
-            // Skip completely blank lines
             if (count(array_filter($row, fn ($v) => trim((string) $v) !== '')) === 0) {
                 continue;
             }
@@ -207,9 +224,6 @@ class ProductController extends Controller
 
             $existing = Product::where('barcode', $barcode)->first();
 
-            // Restock mode + existing product: only barcode + stock_quantity matter.
-            // Name/prices are optional here — if left blank, keep whatever the
-            // product already has instead of requiring you to retype them.
             if ($addToStock && $existing) {
                 if ($barcode === '' || ! is_numeric($stockQuantity)) {
                     $rowErrors[] = "Row {$rowNumber}: missing or invalid barcode/stock_quantity.";
@@ -236,8 +250,6 @@ class ProductController extends Controller
                 continue;
             }
 
-            // Normal mode, OR restock mode but this barcode doesn't exist yet
-            // (a genuinely new product still needs full details to be created).
             if ($barcode === '' || $name === '' || ! is_numeric($cashPrice) || ! is_numeric($creditPrice) || ! is_numeric($stockQuantity)) {
                 $rowErrors[] = $addToStock
                     ? "Row {$rowNumber}: barcode \"{$barcode}\" not found yet — creating a new product needs name, cash_price, and credit_price too, not just stock_quantity."
@@ -289,13 +301,8 @@ class ProductController extends Controller
     {
         $barcode = trim((string) $request->get('barcode'));
 
-        // 1. Try an exact match first (best case: full barcode stored)
         $product = Product::where('barcode', $barcode)->where('is_active', true)->first();
 
-        // 2. Fallback: some products only have a short/partial code on file
-        //    (e.g. copied from Excel with just the last few digits, like
-        //    "17579" instead of the full "9785517579"). If no exact match,
-        //    check whether the SCANNED code ends with a stored short code.
         if (! $product && $barcode !== '') {
             $product = Product::where('is_active', true)
                 ->where('barcode', '!=', '')

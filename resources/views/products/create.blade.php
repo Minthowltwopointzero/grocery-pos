@@ -7,12 +7,15 @@
     <form method="POST" action="{{ route('products.store') }}">
         @csrf
         <div class="mb-3">
-            <label class="form-label fw-semibold">Barcode</label>
-            <input type="text" name="barcode" class="form-control" value="{{ old('barcode') }}" required autofocus>
+            <label class="form-label fw-semibold">Barcode <span class="text-muted fw-normal">(optional)</span></label>
+            <input type="text" name="barcode" class="form-control" value="{{ old('barcode') }}">
+            <div class="form-text">
+                Scan the product's real barcode here if it has one. <strong>Leave blank</strong> for items with no printed barcode (like rice, garlic, or anything sold loose) — the system will generate a unique internal barcode you can print as a sticker.
+            </div>
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold">Product Name</label>
-            <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
+            <input type="text" name="name" class="form-control" value="{{ old('name') }}" required autofocus>
         </div>
         <div class="row">
             <div class="col-6 mb-3">
