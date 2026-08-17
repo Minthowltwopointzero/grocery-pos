@@ -8,13 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('audit_logs')) {
+            return; // already exists, nothing to do
+        }
+
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('user_name'); // snapshot of the name at the time, in case the account is later deleted
+            $table->string('user_name');
             $table->string('user_role')->nullable();
-            $table->string('action'); // e.g. login, logout, product_created, product_updated, product_deleted, customer_created, ...
-            $table->text('description'); // human-readable summary, e.g. "Product deleted: Lucky Me Pancit Canton (barcode 17579)"
+            $table->string('action');
+            $table->text('description');
             $table->string('ip_address')->nullable();
             $table->timestamp('created_at')->useCurrent();
 

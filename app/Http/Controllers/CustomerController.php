@@ -80,7 +80,6 @@ class CustomerController extends Controller
         return view('customers.bulk-upload');
     }
 
-    // Lets the user download a blank CSV with the correct headers to fill in
     public function bulkUploadTemplate()
     {
         $headers = [
@@ -128,13 +127,13 @@ class CustomerController extends Controller
 
         $created = 0;
         $rowErrors = [];
-        $rowNumber = 1; // header was row 1
+        $rowNumber = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
             $rowNumber++;
 
             if (count(array_filter($row, fn ($v) => trim((string) $v) !== '')) === 0) {
-                continue; // skip blank lines
+                continue;
             }
 
             $data = array_combine($header, array_pad($row, count($header), null));
@@ -193,6 +192,17 @@ class CustomerController extends Controller
                 'balance_after' => $customer->balance,
                 'notes' => $validated['notes'] ?? null,
             ]);
+
+            // If the customer is now fully paid off (balance reached zero),
+            // mark all of their past credit sales as "paid" so Sales History
+            // reflects reality — otherwise those old transactions would stay
+            // stuck showing "Unpaid" forever even though the debt is settled.
+            if ($customer->balance <= 0) {
+                $customer->sales()
+                    ->where('payment_type', 'credit')
+                    ->where('status', '!=', 'paid')
+                    ->update(['status' => 'paid']);
+            }
         });
 
         AuditLogger::log(

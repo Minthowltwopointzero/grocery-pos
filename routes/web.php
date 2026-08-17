@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/best-selling', [ReportController::class, 'bestSelling'])->name('reports.best-selling');
         Route::get('/reports/inventory', [ReportController::class, 'inventory'])->name('reports.inventory');
         Route::get('/reports/credit', [ReportController::class, 'credit'])->name('reports.credit');
+        Route::get('/reports/payment-history', [ReportController::class, 'paymentHistory'])->name('reports.payment-history');
 
         Route::get('/customers/bulk-upload', [CustomerController::class, 'bulkUploadForm'])->name('customers.bulk-upload.form');
         Route::post('/customers/bulk-upload', [CustomerController::class, 'bulkUpload'])->name('customers.bulk-upload.store');
@@ -55,9 +56,6 @@ Route::middleware('auth')->group(function () {
     });
 
     // POS - available to admin and cashier
-    // (this also includes product management except delete, viewing the
-    // customer list + credit ledger + recording payments, viewing a receipt
-    // right after checkout, and "My Transactions" - cashiers' own sales only)
     Route::middleware('role:admin,cashier')->group(function () {
         Route::get('/products/bulk-upload', [ProductController::class, 'bulkUploadForm'])->name('products.bulk-upload.form');
         Route::post('/products/bulk-upload', [ProductController::class, 'bulkUpload'])->name('products.bulk-upload.store');

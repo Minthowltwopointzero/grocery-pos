@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     @media print {
-        body { background: #fff !important; }
+        body { background: #ffffff !important; }
         .content-area { padding: 0 !important; }
         .receipt-box {
             max-width: 3.9in !important;
@@ -19,7 +19,7 @@
 @endpush
  
 @section('content')
-<div class="d-flex justify-content-end mb-2 no-print">
+{{--<div class="d-flex justify-content-end mb-2 no-print">
     <button onclick="window.print()" class="btn btn-dark btn-sm"><i class="bi bi-printer"></i> Print Receipt</button>
 </div>
  
@@ -70,5 +70,6 @@
     @endif
     <hr>
     <div class="text-center small">Thank you for your purchase!</div>
-</div>
+</div> --}}
+
 @endsection

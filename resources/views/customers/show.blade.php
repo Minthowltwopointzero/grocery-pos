@@ -3,6 +3,7 @@
 @section('page-title', 'Credit Ledger — ' . $customer->name)
 
 @section('content')
+
 <div class="row g-3">
     <div class="col-md-4">
         <div class="card p-3 mb-3">
@@ -12,7 +13,7 @@
             <div class="text-muted small">Current Balance</div>
             <h3 class="text-{{ $customer->balance > 0 ? 'danger' : 'success' }}">₱{{ number_format($customer->balance, 2) }}</h3>
         </div>
-
+  
         <div class="card p-3">
             <h6 class="fw-bold mb-3">Add Payment</h6>
             <form method="POST" action="{{ route('customers.payments.store', $customer) }}">
@@ -49,7 +50,7 @@
                 </tbody>
             </table>
         </div>
-
+ 
         <div class="card p-3">
             <h6 class="fw-bold mb-3">Payment History</h6>
             <table class="table table-sm">
@@ -71,4 +72,6 @@
         </div>
     </div>
 </div>
+
+
 @endsection

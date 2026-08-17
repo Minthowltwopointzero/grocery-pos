@@ -30,6 +30,18 @@ class DatabaseSeeder extends Seeder
                 'role' => 'cashier',
                 'is_active' => true,
             ]
+            
+        );
+        
+        User::updateOrCreate(
+            ['username' => 'mark'],
+            [
+                'name' => 'mark',
+                'email' => 'mark@grocerypos.test',
+                'password' => Hash::make('mark123'),
+                'role' => 'admin',
+                'is_active' => true,
+            ]
         );
     }
 }

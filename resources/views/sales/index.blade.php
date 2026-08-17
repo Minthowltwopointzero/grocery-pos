@@ -3,6 +3,7 @@
 @section('page-title', 'Sales History')
 
 @section('content')
+
 <div class="card p-3">
     <form method="GET" class="row g-2 mb-3">
         <div class="col-auto">
@@ -14,7 +15,7 @@
                 <option value="cash" {{ request('payment_type')==='cash'?'selected':'' }}>Cash</option>
                 <option value="credit" {{ request('payment_type')==='credit'?'selected':'' }}>Credit</option>
             </select>
-        </div>
+        </div> 
         <div class="col-auto">
             <input type="text" name="search" class="form-control form-control-sm" placeholder="Invoice #" value="{{ request('search') }}">
         </div>
@@ -49,4 +50,5 @@
     </div>
     {{ $sales->links() }}
 </div>
+
 @endsection

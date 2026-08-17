@@ -3,14 +3,16 @@
 @section('page-title', 'Customers / Credit')
 
 @section('content')
+
 <div class="card p-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <form method="GET" class="d-flex" style="max-width:320px;">
             <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search name or office" value="{{ request('search') }}">
-            <button class="btn btn-sm btn-secondary">Search</button>
+            <button class="btn btn-sm btn-secondary">Search</button> 
         </form>
         @if(auth()->user()->isAdmin())
             <div>
+                
                 <a href="{{ route('customers.bulk-upload.form') }}" class="btn btn-outline-dark btn-sm"><i class="bi bi-upload"></i> Bulk Upload</a>
                 <a href="{{ route('customers.create') }}" class="btn btn-dark btn-sm"><i class="bi bi-plus-lg"></i> Add Customer</a>
             </div>
@@ -34,7 +36,7 @@
                         <a href="{{ route('customers.edit', $customer) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                         <form action="{{ route('customers.destroy', $customer) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this customer?')">
                             @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
                     @endif
                 </td>
@@ -47,4 +49,5 @@
     </div>
     {{ $customers->links() }}
 </div>
+
 @endsection

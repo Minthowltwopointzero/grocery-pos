@@ -65,7 +65,7 @@
                 </div>
             </div>
 
-            <button id="checkoutBtn" class="btn btn-dark btn-lg w-100 mt-4" disabled>Complete Sale</button>
+            <button id="checkoutBtn" class="btn btn-dark btn-lg w-100 mt-4">Complete Sale</button>
             <button id="clearCartBtn" class="btn btn-outline-secondary w-100 mt-2">Clear Cart</button>
         </div>
     </div>
@@ -285,19 +285,26 @@ function lookupProduct(barcode) {
 }
 
 function addToCart(product) {
-    const existing = cart.find(item => item.product_id === product.id);
-    if (existing) {
+    const existingIndex = cart.findIndex(item => item.product_id === product.id);
+
+    if (existingIndex !== -1) {
+        const existing = cart[existingIndex];
         if (existing.quantity < product.stock_quantity) {
             existing.quantity += 1;
         } else {
             alert('No more stock available for ' + product.name);
+            return;
         }
+        // Move the re-scanned item to the top of the cart
+        cart.splice(existingIndex, 1);
+        cart.unshift(existing);
     } else {
         if (product.stock_quantity < 1) {
             alert(product.name + ' is out of stock.');
             return;
         }
-        cart.push({
+        // Newest scanned item goes to the top of the cart
+        cart.unshift({
             product_id: product.id,
             barcode: product.barcode,
             name: product.name,

@@ -3,6 +3,7 @@
 @section('page-title', 'Edit Customer')
 
 @section('content')
+
 <div class="card p-4" style="max-width:500px;">
     <form method="POST" action="{{ route('customers.update', $customer) }}">
         @csrf @method('PUT')
@@ -18,4 +19,5 @@
         <a href="{{ route('customers.index') }}" class="btn btn-link">Cancel</a>
     </form>
 </div>
+ 
 @endsection

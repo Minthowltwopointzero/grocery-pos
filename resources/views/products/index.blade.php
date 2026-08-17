@@ -1,70 +1,53 @@
 @extends('layouts.app')
-@section('title', 'Products')
-@section('page-title', 'Products')
+@section('title', 'Reports')
+@section('page-title', 'Reports')
 
 @section('content')
-<div class="card p-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <form method="GET" class="d-flex" style="max-width:320px;">
-            <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search barcode or name" value="{{ request('search') }}">
-            <button class="btn btn-sm btn-secondary">Search</button>
-        </form>
-        <div>
-            <a href="{{ route('products.bulk-upload.form') }}" class="btn btn-outline-dark btn-sm"><i class="bi bi-upload"></i> Bulk Upload</a>
-            <a href="{{ route('products.create') }}" class="btn btn-dark btn-sm"><i class="bi bi-plus-lg"></i> Add Product</a>
-        </div>
+<div class="row g-3">
+    <div class="col-md-6 col-lg-4">
+        <a href="{{ route('reports.sales-summary') }}" class="text-decoration-none">
+            <div class="card p-4 h-100 text-center">
+                <i class="bi bi-graph-up-arrow fs-1 text-success mb-2"></i>
+                <h6 class="fw-bold mb-1">Sales Summary</h6>
+                <div class="small text-muted">Daily totals, cash vs credit breakdown</div>
+            </div>
+        </a>
     </div>
-
-    <div class="table-responsive">
-    <table class="table table-hover align-middle">
-        <thead>
-        <tr>
-            <th>Barcode</th><th>Name</th><th>Cash Price</th><th>Credit Price</th><th>Stock</th><th>Expiry</th><th>Status</th><th></th>
-        </tr>
-        </thead>
-        <tbody>
-        @forelse($products as $product)
-            <tr>
-                <td><code>{{ $product->barcode }}</code></td>
-                <td>{{ $product->name }}</td>
-                <td>₱{{ number_format($product->cash_price, 2) }}</td>
-                <td>₱{{ number_format($product->credit_price, 2) }}</td>
-                <td>
-                    <span class="badge bg-{{ $product->isLowStock() ? 'danger' : 'success' }}">{{ $product->stock_quantity }}</span>
-                </td>
-                <td>
-                    @if($product->expiration_date)
-                        <span class="badge bg-{{ $product->isExpired() ? 'dark' : ($product->isExpiringSoon() ? 'warning' : 'success') }}">
-                            {{ $product->expiration_date->format('M d, Y') }}
-                        </span>
-                    @else
-                        <span class="text-muted small">-</span>
-                    @endif
-                </td>
-                <td>
-                    @if($product->is_active)
-                        <span class="badge bg-success">Active</span>
-                    @else
-                        <span class="badge bg-secondary">Inactive</span>
-                    @endif
-                </td>
-                <td class="text-end">
-                    <a href="{{ route('products.label', $product) }}" class="btn btn-sm btn-outline-dark" title="Print barcode label"><i class="bi bi-upc"></i></a>
-                    <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                    @if(auth()->user()->isAdmin())
-                        <form action="{{ route('products.destroy', $product) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this product?')">
-                            @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
-                    @endif
-                </td>
-            </tr>
-        @empty
-            <tr><td colspan="8" class="text-center text-muted">No products found.</td></tr>
-        @endforelse
-        </tbody>
-    </table>
+    <div class="col-md-6 col-lg-4">
+        <a href="{{ route('reports.best-selling') }}" class="text-decoration-none">
+            <div class="card p-4 h-100 text-center">
+                <i class="bi bi-award fs-1 text-warning mb-2"></i>
+                <h6 class="fw-bold mb-1">Best-Selling Products</h6>
+                <div class="small text-muted">Top products by quantity sold</div>
+            </div>
+        </a>
     </div>
-    {{ $products->links() }}
+    <div class="col-md-6 col-lg-4">
+        <a href="{{ route('reports.inventory') }}" class="text-decoration-none">
+            <div class="card p-4 h-100 text-center">
+                <i class="bi bi-box-seam fs-1 text-primary mb-2"></i>
+                <h6 class="fw-bold mb-1">Inventory Report</h6>
+                <div class="small text-muted">Current stock levels and value</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{{ route('reports.credit') }}" class="text-decoration-none">
+            <div class="card p-4 h-100 text-center">
+                <i class="bi bi-credit-card fs-1 text-danger mb-2"></i>
+                <h6 class="fw-bold mb-1">Credit / Utang Report</h6>
+                <div class="small text-muted">Customers with outstanding balances</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{{ route('reports.payment-history') }}" class="text-decoration-none">
+            <div class="card p-4 h-100 text-center">
+                <i class="bi bi-cash-coin fs-1 text-success mb-2"></i>
+                <h6 class="fw-bold mb-1">Payment History</h6>
+                <div class="small text-muted">All credit payments, all customers combined</div>
+            </div>
+        </a>
+    </div>
 </div>
 @endsection

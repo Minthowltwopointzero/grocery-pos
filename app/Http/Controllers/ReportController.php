@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CreditPayment;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -44,8 +45,6 @@ class ReportController extends Controller
         $grandCash = $rows->sum('cash_total');
         $grandCredit = $rows->sum('credit_total');
 
-        // Chronological order (oldest -> newest) for the chart, separate from
-        // the table above which stays newest-first for readability.
         $chartRows = $rows->sortBy('sale_date')->values();
         $chartLabels = $chartRows->pluck('sale_date')->map(fn ($d) => \Carbon\Carbon::parse($d)->format('M d'));
         $chartCash = $chartRows->pluck('cash_total');
@@ -72,7 +71,6 @@ class ReportController extends Controller
             ->limit(30)
             ->get();
 
-        // Only chart the top 15 so labels stay readable
         $chartTop = $rows->take(15);
         $chartLabels = $chartTop->pluck('product_name');
         $chartQty = $chartTop->pluck('total_qty');
@@ -88,7 +86,6 @@ class ReportController extends Controller
         $totalStockCount = $products->sum('stock_quantity');
         $lowStockCount = $products->filter(fn ($p) => $p->is_active && $p->stock_quantity <= 10)->count();
 
-        // Status breakdown for the pie chart
         $statusCounts = [
             'OK' => 0,
             'Low Stock' => 0,
@@ -119,5 +116,26 @@ class ReportController extends Controller
         $totalOutstanding = $customers->sum('balance');
 
         return view('reports.credit', compact('customers', 'totalOutstanding'));
+    }
+
+    // Combined log of ALL credit payments across ALL customers, newest first.
+    public function paymentHistory(Request $request)
+    {
+        [$from, $to] = $this->dateRange($request);
+
+        $query = CreditPayment::with(['customer', 'receiver'])
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to);
+
+        if ($customerId = $request->get('customer_id')) {
+            $query->where('customer_id', $customerId);
+        }
+
+        $payments = $query->latest()->paginate(30)->withQueryString();
+
+        $totalCollected = (clone $query)->sum('amount');
+        $customers = Customer::orderBy('name')->get();
+
+        return view('reports.payment-history', compact('payments', 'from', 'to', 'totalCollected', 'customers'));
     }
 }
