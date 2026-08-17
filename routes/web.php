@@ -32,12 +32,12 @@ Route::middleware('auth')->group(function () {
 
     // Admin-only management: creating, editing, deleting customers
     // + deleting products (cashiers can add/edit but not delete products)
-    // + Dashboard + Sales History + Audit Log + Reports (cashiers no longer see these)
+    // + Dashboard + Sales History (full store list) + Audit Log + Reports
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
 
         Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
-        Route::get('/sales/{sale}/receipt', [SaleController::class, 'show'])->name('sales.receipt');
 
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
@@ -55,8 +55,9 @@ Route::middleware('auth')->group(function () {
     });
 
     // POS - available to admin and cashier
-    // (this also includes product management except delete, and viewing the
-    // customer list + credit ledger + recording payments)
+    // (this also includes product management except delete, viewing the
+    // customer list + credit ledger + recording payments, viewing a receipt
+    // right after checkout, and "My Transactions" - cashiers' own sales only)
     Route::middleware('role:admin,cashier')->group(function () {
         Route::get('/products/bulk-upload', [ProductController::class, 'bulkUploadForm'])->name('products.bulk-upload.form');
         Route::post('/products/bulk-upload', [ProductController::class, 'bulkUpload'])->name('products.bulk-upload.store');
@@ -68,6 +69,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
         Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
         Route::get('/api/products/lookup', [ProductController::class, 'findByBarcode'])->name('products.lookup');
+
+        Route::get('/my-sales', [SaleController::class, 'myTransactions'])->name('sales.my');
+        Route::get('/sales/{sale}/receipt', [SaleController::class, 'show'])->name('sales.receipt');
 
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
