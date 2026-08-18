@@ -213,7 +213,7 @@
         <div class="mt-auto">
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button class="btn btn-sm btn-outline-light w-100 mx-2" style="width:calc(100% - 1rem)"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
+               <button class="btn btn-sm btn-outline-light d-block mx-auto" style="width:calc(100% - 1rem);box-sizing:border-box;"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
             </form>
         </div>
     </nav>
