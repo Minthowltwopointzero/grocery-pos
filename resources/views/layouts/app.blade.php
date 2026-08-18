@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Grocery POS')</title>
     <script>
@@ -125,6 +125,65 @@
         html[data-bs-theme="dark"] .alert-success { background: #10261c !important; color: #3fb950 !important; }
         html[data-bs-theme="dark"] .alert-danger { background: #2d1214 !important; color: #f85149 !important; }
         html[data-bs-theme="dark"] .btn-close { filter: invert(1); }
+
+        /* Mobile Safari / narrow-screen stability */
+        html, body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
+        .content-area, .container, .container-fluid, .row > * {
+            min-width: 0;
+        }
+        img, svg, canvas, video {
+            max-width: 100%;
+        }
+        .table-responsive {
+            max-width: 100%;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (max-width: 575.98px) {
+            .sidebar {
+                width: min(264px, calc(100vw - 32px));
+                width: min(264px, calc(100dvw - 32px));
+            }
+            .topbar {
+                padding-left: max(.75rem, env(safe-area-inset-left)) !important;
+                padding-right: max(.75rem, env(safe-area-inset-right)) !important;
+            }
+            .content-area {
+                width: 100%;
+                padding: .75rem;
+                padding-left: max(.75rem, env(safe-area-inset-left));
+                padding-right: max(.75rem, env(safe-area-inset-right));
+                padding-bottom: max(.75rem, env(safe-area-inset-bottom));
+            }
+            .card {
+                max-width: 100%;
+                border-radius: .75rem;
+            }
+            input.form-control,
+            select.form-select,
+            textarea.form-control {
+                font-size: 16px !important;
+            }
+            .modal-dialog {
+                width: auto;
+                max-width: calc(100% - 1rem);
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .btn-group {
+                max-width: 100%;
+            }
+        }
+
+        @supports (height: 100dvh) {
+            body { min-height: 100dvh; }
+            .sidebar { min-height: 100dvh; }
+        }
 
         @media print { .no-print { display: none !important; } }
     </style>

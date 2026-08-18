@@ -17,7 +17,11 @@ class DashboardController extends Controller
         $totalCreditOutstanding = Customer::sum('balance');
 
         $lowStockProducts = Product::where('is_active', true)->where('stock_quantity', '<=', 10)->orderBy('stock_quantity')->get();
-        $recentSales = Sale::with(['user', 'customer'])->latest()->limit(8)->get();
+        $recentSales = Sale::with(['user', 'customer'])
+            ->whereDate('created_at', today())
+            ->latest()
+            ->limit(8)
+            ->get();
 
         $expiringSoonProducts = Product::where('is_active', true)
             ->whereNotNull('expiration_date')

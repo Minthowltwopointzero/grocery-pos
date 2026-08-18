@@ -34,7 +34,7 @@
     <div class="col-md-7">
         <div class="card p-3">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-bold mb-0">Recent Transactions</h6>
+                <h6 class="fw-bold mb-0">Today's Recent Transactions</h6>
                 <span class="small text-muted"><span class="live-dot"></span> Live</span>
             </div>
             <div class="table-responsive">
@@ -50,7 +50,7 @@
                         <td><a href="{{ route('sales.receipt', $sale) }}" class="btn btn-sm btn-outline-secondary">View</a></td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-muted text-center">No sales yet.</td></tr>
+                    <tr><td colspan="5" class="text-muted text-center">No sales recorded today.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -153,7 +153,7 @@ function refreshDashboard() {
             // Recent Transactions
             const recentBody = document.getElementById('recentSalesBody');
             if (data.recent_sales.length === 0) {
-                recentBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No sales yet.</td></tr>';
+                recentBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No sales recorded today.</td></tr>';
             } else {
                 recentBody.innerHTML = data.recent_sales.map(s => `
                     <tr>
