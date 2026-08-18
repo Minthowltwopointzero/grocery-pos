@@ -19,7 +19,7 @@
 @endpush
  
 @section('content')
-{{--<div class="d-flex justify-content-end mb-2 no-print">
+<div class="d-flex justify-content-end mb-2 no-print">
     <button onclick="window.print()" class="btn btn-dark btn-sm"><i class="bi bi-printer"></i> Print Receipt</button>
 </div>
  
@@ -64,12 +64,21 @@
             <span>Change</span><span>₱{{ number_format($sale->change_amount, 2) }}</span>
         </div>
     @else
-        <div class="d-flex justify-content-between small text-danger">
-            <span>Status</span><span>UNPAID (On Credit)</span>
+        <div class="d-flex justify-content-between small {{ $sale->status === 'paid' ? 'text-success' : 'text-danger' }}">
+            <span>Status</span>
+            <span>
+                @if($sale->status === 'paid')
+                    PAID
+                @elseif($sale->status === 'partial')
+                    PARTIALLY PAID (On Credit)
+                @else
+                    UNPAID (On Credit)
+                @endif
+            </span>
         </div>
     @endif
     <hr>
     <div class="text-center small">Thank you for your purchase!</div>
-</div> --}}
+</div> 
 
 @endsection
