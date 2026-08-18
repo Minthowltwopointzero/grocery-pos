@@ -2,6 +2,35 @@
 @section('title', 'Sales Summary')
 @section('page-title', 'Sales Summary Report')
 
+@push('styles')
+<style>
+    .sales-chart-wrap {
+        position: relative;
+        height: 340px;
+        width: 100%;
+    }
+    @media print {
+        @page { size: portrait; margin: 10mm; }
+        .sales-chart-card {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .sales-chart-wrap {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 210px !important;
+        }
+        #salesChart {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 210px !important;
+        }
+    }
+</style>
+@endpush
 @section('content')
 <div class="mb-3 no-print">
     <a href="{{ route('reports.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
@@ -51,9 +80,11 @@
     </div>
 </div>
 
-<div class="card p-3 mb-3">
+<div class="card p-3 mb-3 sales-chart-card">
     <h6 class="fw-bold mb-3">Daily Sales Trend</h6>
-    <canvas id="salesChart" height="90"></canvas>
+    <div class="sales-chart-wrap">
+        <canvas id="salesChart"></canvas>
+    </div>
 </div>
 
 <div class="card p-3">
@@ -84,33 +115,76 @@
 <script>
     const ctx = document.getElementById('salesChart');
     if (ctx && typeof Chart !== 'undefined') {
-        new Chart(ctx, {
-            type: 'bar',
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const cashGradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 340);
+        cashGradient.addColorStop(0, 'rgba(25, 135, 84, 0.30)');
+        cashGradient.addColorStop(1, 'rgba(25, 135, 84, 0.02)');
+        const creditGradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 340);
+        creditGradient.addColorStop(0, 'rgba(245, 158, 11, 0.28)');
+        creditGradient.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
+
+        const salesChart = new Chart(ctx, {
+            type: 'line',
             data: {
                 labels: {!! json_encode($chartLabels) !!},
                 datasets: [
                     {
-                        label: 'Cash',
-                        data: {!! json_encode($chartCash) !!},
-                        backgroundColor: '#198754',
+                        label: 'Cash Sales', data: {!! json_encode($chartCash) !!},
+                        borderColor: '#198754', backgroundColor: cashGradient,
+                        pointBackgroundColor: '#ffffff', pointBorderColor: '#198754',
+                        pointBorderWidth: 3, pointRadius: 5, pointHoverRadius: 7,
+                        borderWidth: 3, tension: 0.35, fill: true,
                     },
                     {
-                        label: 'Credit',
-                        data: {!! json_encode($chartCredit) !!},
-                        backgroundColor: '#ffc107',
+                        label: 'Credit Sales', data: {!! json_encode($chartCredit) !!},
+                        borderColor: '#f59e0b', backgroundColor: creditGradient,
+                        pointBackgroundColor: '#ffffff', pointBorderColor: '#f59e0b',
+                        pointBorderWidth: 3, pointRadius: 5, pointHoverRadius: 7,
+                        borderWidth: 3, tension: 0.35, fill: true,
                     },
                 ],
             },
             options: {
-                responsive: true,
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
                 scales: {
-                    x: { stacked: true },
-                    y: { stacked: true, ticks: { callback: (v) => '₱' + v } },
+                    x: {
+                        grid: { display: false }, border: { display: false },
+                        ticks: { color: isDark ? '#9198a1' : '#64748b' },
+                    },
+                    y: {
+                        beginAtZero: true, grace: '10%', border: { display: false },
+                        grid: { color: isDark ? 'rgba(255,255,255,.08)' : 'rgba(15,23,42,.08)' },
+                        ticks: {
+                            color: isDark ? '#9198a1' : '#64748b', padding: 10,
+                            callback: (value) => '₱' + Number(value).toLocaleString(),
+                        },
+                    },
                 },
                 plugins: {
-                    legend: { position: 'bottom' },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: isDark ? '#c9d1d9' : '#475569', usePointStyle: true,
+                            pointStyle: 'circle', padding: 24, boxWidth: 9, boxHeight: 9,
+                        },
+                    },
+                    tooltip: {
+                        padding: 12,
+                        callbacks: {
+                            label: (context) => ` ${context.dataset.label}: ₱${Number(context.parsed.y).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                        },
+                    },
                 },
             },
+        });
+
+        window.addEventListener('beforeprint', () => {
+            salesChart.resize();
+        });
+        window.addEventListener('afterprint', () => {
+            salesChart.resize();
         });
     }
 </script>
