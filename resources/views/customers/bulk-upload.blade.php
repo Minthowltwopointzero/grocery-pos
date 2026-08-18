@@ -3,9 +3,34 @@
 @section('title', 'Bulk Upload Customers')
 @section('page-title', 'Bulk Upload Customers')
 
+@push('styles')
+<style>
+    .customer-bulk-upload .card-header {
+        color: var(--ink-900);
+    }
+    .customer-bulk-upload .import-details {
+        background: #f8f9fa;
+        color: #172033;
+    }
+    html[data-bs-theme="dark"] .customer-bulk-upload .card-header.bg-white {
+        background-color: #1c2128 !important;
+        border-color: var(--border-c) !important;
+        color: #f0f6fc;
+    }
+    html[data-bs-theme="dark"] .customer-bulk-upload .import-details {
+        background: #111d2e !important;
+        border-color: #30363d !important;
+        color: #e6edf3;
+    }
+    html[data-bs-theme="dark"] .customer-bulk-upload .text-secondary {
+        color: #b1bac4 !important;
+    }
+</style>
+@endpush
+
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid customer-bulk-upload">
     <div class="mb-4">
         <h3 class="fw-bold mb-1">Bulk Customer Import</h3>
         <p class="text-muted mb-0">
@@ -80,7 +105,7 @@
                             </div>
                         </div>
 
-                        <div class="border rounded bg-light p-3 mb-4">
+                        <div class="border rounded import-details p-3 mb-4">
                             <div class="row">
 
                                 <div class="col-md-6">

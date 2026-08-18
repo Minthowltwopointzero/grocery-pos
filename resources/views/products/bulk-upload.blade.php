@@ -7,8 +7,15 @@
     .big-toggle-box {
         border: 2px solid #0d6efd;
         background: #eaf2ff;
+        color: #172033;
         border-radius: .5rem;
         padding: 1rem;
+    }
+    .big-toggle-box .form-text {
+        color: #475569;
+    }
+    .big-toggle-box .form-check-label {
+        color: #172033;
     }
     .big-toggle-box .form-check-input {
         width: 3.2rem !important;
@@ -35,8 +42,34 @@
         background: #6c757d;
         color: #fff;
     }
+    .big-toggle-box.is-on {
+        background: #eaf7ef;
+        border-color: #198754;
+    }
     .big-toggle-box.is-on .toggle-status {
         background: #198754;
+    }
+    html[data-bs-theme="dark"] .big-toggle-box {
+        background: #111d2e;
+        border-color: #58a6ff;
+        color: #e6edf3;
+    }
+    html[data-bs-theme="dark"] .big-toggle-box .form-check-label {
+        color: #f0f6fc;
+    }
+    html[data-bs-theme="dark"] .big-toggle-box .form-text {
+        color: #b1bac4;
+    }
+    html[data-bs-theme="dark"] .big-toggle-box .toggle-status {
+        background: #484f58;
+        color: #ffffff;
+    }
+    html[data-bs-theme="dark"] .big-toggle-box.is-on {
+        background: #10261c;
+        border-color: #3fb950;
+    }
+    html[data-bs-theme="dark"] .big-toggle-box.is-on .toggle-status {
+        background: #238636;
     }
 </style>
 @endpush
