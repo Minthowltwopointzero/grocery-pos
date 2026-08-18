@@ -43,12 +43,13 @@
 
             <div id="creditFields" style="display:none;">
                 <label class="form-label small fw-semibold">Select Customer</label>
-                <select id="customerSelect" class="form-select mb-3">
-                    <option value="">-- Select Customer --</option>
-                    @foreach($customers as $customer)
-                        <option value="{{ $customer->id }}">{{ $customer->name }} ({{ $customer->office }})</option>
-                    @endforeach
-                </select>
+                <div class="position-relative mb-3" id="customerSearchWrap">
+                    <input type="text" id="customerSearch" class="form-control"
+                           placeholder="Type customer name..." autocomplete="off">
+                    <input type="hidden" id="customerSelect" value="">
+                    <div id="customerSuggestions" class="list-group position-absolute w-100 shadow"
+                         style="z-index: 1050; max-height: 240px; overflow-y: auto; display: none;"></div>
+                </div>
             </div>
 
             <div class="d-flex justify-content-between mb-1">
@@ -102,6 +103,13 @@ const changeDisplay = document.getElementById('changeDisplay');
 const amountPaidInput = document.getElementById('amountPaidInput');
 const checkoutBtn = document.getElementById('checkoutBtn');
 const customerSelect = document.getElementById('customerSelect');
+const customerSearch = document.getElementById('customerSearch');
+const customerSuggestions = document.getElementById('customerSuggestions');
+const customers = @json($customers->map(fn ($customer) => [
+    'id' => $customer->id,
+    'label' => $customer->name . ($customer->office ? " ({$customer->office})" : ''),
+])->values());
+let activeCustomerSuggestion = -1;
 const creditFields = document.getElementById('creditFields');
 const cashFields = document.getElementById('cashFields');
 
@@ -217,6 +225,7 @@ document.querySelectorAll('input[name="paymentType"]').forEach(radio => {
         if (this.value === 'credit') {
             creditFields.style.display = 'block';
             cashFields.style.display = 'none';
+            setTimeout(() => customerSearch.focus(), 0);
         } else {
             creditFields.style.display = 'none';
             cashFields.style.display = 'block';
@@ -225,6 +234,78 @@ document.querySelectorAll('input[name="paymentType"]').forEach(radio => {
     });
 });
 
+function selectCustomer(customer) {
+    customerSelect.value = customer.id;
+    customerSearch.value = customer.label;
+    customerSuggestions.style.display = 'none';
+    activeCustomerSuggestion = -1;
+}
+
+function renderCustomerSuggestions() {
+    const query = customerSearch.value.trim().toLowerCase();
+    customerSelect.value = '';
+    customerSuggestions.innerHTML = '';
+    activeCustomerSuggestion = -1;
+
+    if (!query) {
+        customerSuggestions.style.display = 'none';
+        return;
+    }
+
+    const matches = customers
+        .filter(customer => customer.label.toLowerCase().includes(query))
+        .slice(0, 10);
+
+    if (matches.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'list-group-item text-muted small';
+        empty.textContent = 'No matching customer found.';
+        customerSuggestions.appendChild(empty);
+    } else {
+        matches.forEach(customer => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'list-group-item list-group-item-action customer-suggestion';
+            option.textContent = customer.label;
+            option.addEventListener('mousedown', event => {
+                event.preventDefault();
+                selectCustomer(customer);
+            });
+            customerSuggestions.appendChild(option);
+        });
+    }
+
+    customerSuggestions.style.display = 'block';
+}
+
+customerSearch.addEventListener('input', renderCustomerSuggestions);
+customerSearch.addEventListener('focus', () => {
+    if (customerSearch.value.trim() && !customerSelect.value) {
+        renderCustomerSuggestions();
+    }
+});
+customerSearch.addEventListener('keydown', event => {
+    const options = [...customerSuggestions.querySelectorAll('.customer-suggestion')];
+    if (!options.length || customerSuggestions.style.display === 'none') return;
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        activeCustomerSuggestion += event.key === 'ArrowDown' ? 1 : -1;
+        activeCustomerSuggestion = (activeCustomerSuggestion + options.length) % options.length;
+        options.forEach((option, index) => option.classList.toggle('active', index === activeCustomerSuggestion));
+        options[activeCustomerSuggestion].scrollIntoView({ block: 'nearest' });
+    } else if (event.key === 'Enter' && activeCustomerSuggestion >= 0) {
+        event.preventDefault();
+        options[activeCustomerSuggestion].dispatchEvent(new MouseEvent('mousedown'));
+    } else if (event.key === 'Escape') {
+        customerSuggestions.style.display = 'none';
+    }
+});
+document.addEventListener('click', event => {
+    if (!document.getElementById('customerSearchWrap').contains(event.target)) {
+        customerSuggestions.style.display = 'none';
+    }
+});
 // Barcode scanner (physical, USB): acts as a keyboard, typing fast then hitting Enter
 barcodeInput.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {

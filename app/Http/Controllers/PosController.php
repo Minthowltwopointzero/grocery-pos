@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -111,6 +112,11 @@ class PosController extends Controller
                     $customer->balance += $total;
                     $customer->save();
                 }
+
+                AuditLogger::log(
+                    'sale_completed',
+                    "Completed {$validated['payment_type']} sale {$sale->invoice_no} with a total of ₱" . number_format($total, 2)
+                );
 
                 return $sale;
             });
