@@ -38,6 +38,33 @@
     <h3 class="text-success">₱{{ number_format($totalCollected, 2) }}</h3>
 </div>
 
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h6 class="fw-bold mb-3">Daily Collection Trend</h6>
+            @if(count($dailyLabels) > 0)
+                <div style="position:relative; height:220px;">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            @else
+                <p class="text-muted small mb-0">No payments recorded in this date range.</p>
+            @endif
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h6 class="fw-bold mb-3">Top Customers by Payment</h6>
+            @if(count($topCustomerLabels) > 0)
+                <div style="position:relative; height:220px;">
+                    <canvas id="topCustomersChart"></canvas>
+                </div>
+            @else
+                <p class="text-muted small mb-0">No payments recorded in this date range.</p>
+            @endif
+        </div>
+    </div>
+</div>
+
 <div class="card p-3">
     <div class="table-responsive">
     <table class="table table-hover align-middle">
@@ -67,3 +94,88 @@
     {{ $payments->links() }}
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const dailyCtx = document.getElementById('dailyChart');
+    if (dailyCtx && typeof Chart !== 'undefined') {
+        new Chart(dailyCtx, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode($dailyLabels) !!},
+                datasets: [{
+                    label: 'Collected',
+                    data: {!! json_encode($dailyTotals) !!},
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#198754',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => '₱' + Number(ctx.raw).toLocaleString(undefined, { minimumFractionDigits: 2 }),
+                        },
+                    },
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: (v) => '₱' + Number(v).toLocaleString() },
+                        grid: { color: 'rgba(0,0,0,.05)' },
+                    },
+                    x: { grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    const topCtx = document.getElementById('topCustomersChart');
+    if (topCtx && typeof Chart !== 'undefined') {
+        new Chart(topCtx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($topCustomerLabels) !!},
+                datasets: [{
+                    label: 'Total Paid',
+                    data: {!! json_encode($topCustomerTotals) !!},
+                    backgroundColor: '#6366f1',
+                    borderRadius: 6,
+                    maxBarThickness: 22,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => '₱' + Number(ctx.raw).toLocaleString(undefined, { minimumFractionDigits: 2 }),
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { callback: (v) => '₱' + Number(v).toLocaleString() },
+                        grid: { color: 'rgba(0,0,0,.05)' },
+                    },
+                    y: { grid: { display: false } },
+                },
+            },
+        });
+    }
+</script>
+@endpush

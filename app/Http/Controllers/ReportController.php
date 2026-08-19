@@ -118,7 +118,6 @@ class ReportController extends Controller
         return view('reports.credit', compact('customers', 'totalOutstanding'));
     }
 
-    // Combined log of ALL credit payments across ALL customers, newest first.
     public function paymentHistory(Request $request)
     {
         [$from, $to] = $this->dateRange($request);
@@ -136,6 +135,43 @@ class ReportController extends Controller
         $totalCollected = (clone $query)->sum('amount');
         $customers = Customer::orderBy('name')->get();
 
-        return view('reports.payment-history', compact('payments', 'from', 'to', 'totalCollected', 'customers'));
+        // Chart 1: Daily collection trend (respects the same filters, but
+        // not paginated - we want the full range for the chart)
+        $dailyQuery = CreditPayment::whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to);
+        if ($customerId) {
+            $dailyQuery->where('customer_id', $customerId);
+        }
+        $dailyRows = $dailyQuery
+            ->selectRaw('DATE(created_at) as pay_date')
+            ->selectRaw('SUM(amount) as total')
+            ->groupBy('pay_date')
+            ->orderBy('pay_date')
+            ->get();
+        $dailyLabels = $dailyRows->pluck('pay_date')->map(fn ($d) => \Carbon\Carbon::parse($d)->format('M d'));
+        $dailyTotals = $dailyRows->pluck('total');
+
+        // Chart 2: Top customers by payment amount within the range
+        $topCustomersQuery = CreditPayment::join('customers', 'customers.id', '=', 'credit_payments.customer_id')
+            ->whereDate('credit_payments.created_at', '>=', $from)
+            ->whereDate('credit_payments.created_at', '<=', $to);
+        if ($customerId) {
+            $topCustomersQuery->where('credit_payments.customer_id', $customerId);
+        }
+        $topCustomerRows = $topCustomersQuery
+            ->selectRaw('customers.name as customer_name')
+            ->selectRaw('SUM(credit_payments.amount) as total_paid')
+            ->groupBy('customers.name')
+            ->havingRaw('SUM(credit_payments.amount) > 0')
+            ->orderByDesc('total_paid')
+            ->limit(10)
+            ->get();
+        $topCustomerLabels = $topCustomerRows->pluck('customer_name');
+        $topCustomerTotals = $topCustomerRows->pluck('total_paid');
+
+        return view('reports.payment-history', compact(
+            'payments', 'from', 'to', 'totalCollected', 'customers',
+            'dailyLabels', 'dailyTotals', 'topCustomerLabels', 'topCustomerTotals'
+        ));
     }
 }
