@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Grocery POS')</title>
     <script>
@@ -53,8 +53,9 @@
             background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
             color: #fff; box-shadow: 0 4px 12px rgba(99,102,241,.35);
         }
-        .sidebar .brand { color: #fff; font-weight: 800; font-size: 1.2rem; letter-spacing: -.02em; }
+        .sidebar .brand { color: #fff; font-weight: 800; font-size: 1.2rem; letter-spacing: -.02em; display: flex; align-items: center; gap: .5rem; }
         .sidebar .brand i { color: var(--brand-500); }
+        .sidebar .brand-logo { height: 38px; width: 38px; border-radius: 50%; object-fit: cover; background: #fff; }
 
         .topbar { background: var(--card-bg); border-bottom: 1px solid var(--border-c); box-shadow: 0 1px 2px rgba(15,23,42,.03); }
         .content-area { padding: 1.75rem; }
@@ -126,65 +127,6 @@
         html[data-bs-theme="dark"] .alert-danger { background: #2d1214 !important; color: #f85149 !important; }
         html[data-bs-theme="dark"] .btn-close { filter: invert(1); }
 
-        /* Mobile Safari / narrow-screen stability */
-        html, body {
-            width: 100%;
-            max-width: 100%;
-            overflow-x: hidden;
-            -webkit-text-size-adjust: 100%;
-        }
-        .content-area, .container, .container-fluid, .row > * {
-            min-width: 0;
-        }
-        img, svg, canvas, video {
-            max-width: 100%;
-        }
-        .table-responsive {
-            max-width: 100%;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        @media (max-width: 575.98px) {
-            .sidebar {
-                width: min(264px, calc(100vw - 32px));
-                width: min(264px, calc(100dvw - 32px));
-            }
-            .topbar {
-                padding-left: max(.75rem, env(safe-area-inset-left)) !important;
-                padding-right: max(.75rem, env(safe-area-inset-right)) !important;
-            }
-            .content-area {
-                width: 100%;
-                padding: .75rem;
-                padding-left: max(.75rem, env(safe-area-inset-left));
-                padding-right: max(.75rem, env(safe-area-inset-right));
-                padding-bottom: max(.75rem, env(safe-area-inset-bottom));
-            }
-            .card {
-                max-width: 100%;
-                border-radius: .75rem;
-            }
-            input.form-control,
-            select.form-select,
-            textarea.form-control {
-                font-size: 16px !important;
-            }
-            .modal-dialog {
-                width: auto;
-                max-width: calc(100% - 1rem);
-                margin-left: auto;
-                margin-right: auto;
-            }
-            .btn-group {
-                max-width: 100%;
-            }
-        }
-
-        @supports (height: 100dvh) {
-            body { min-height: 100dvh; }
-            .sidebar { min-height: 100dvh; }
-        }
-
         @media print { .no-print { display: none !important; } }
     </style>
     @stack('styles')
@@ -192,7 +134,7 @@
 <body>
     <nav class="sidebar offcanvas offcanvas-start d-flex flex-column p-2 no-print" tabindex="-1" id="sidebarMenu">
         <div class="d-flex justify-content-between align-items-center px-2 pt-2 pb-3">
-            <span class="brand"><i class="bi bi-basket3-fill"></i> Grocery POS</span>
+            <span class="brand"><img src="{{ asset('images/logo.png') }}" alt="Kuya Nick's Sari Sari Store" class="brand-logo"> Kuya Nick's</span>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
         </div>
         @if(auth()->user()?->isAdmin())
@@ -209,11 +151,12 @@
         @if(auth()->user()?->isAdmin())
             <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart-line me-2"></i>Reports</a>
             <a href="{{ route('audit-logs.index') }}" class="{{ request()->routeIs('audit-logs.*') ? 'active' : '' }}"><i class="bi bi-clock-history me-2"></i>Audit Log</a>
+            <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'active' : '' }}"><i class="bi bi-person-badge me-2"></i>User Accounts</a>
         @endif
         <div class="mt-auto">
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-               <button class="btn btn-sm btn-outline-light d-block mx-auto" style="width:calc(100% - 1rem);box-sizing:border-box;"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
+                <button class="btn btn-sm btn-outline-light d-block mx-auto" style="width:calc(100% - 1rem);box-sizing:border-box;"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
             </form>
         </div>
     </nav>

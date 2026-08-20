@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
@@ -30,11 +31,11 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 // Authenticated routes
 Route::middleware('auth')->group(function () {
 
-    // Admin-only management: creating, editing, deleting customers
-    // + deleting products (cashiers can add/edit but not delete products)
-    // + Dashboard + Sales History (full store list) + Audit Log + Reports
+    // Admin-only: Dashboard, Sales History (full list), Audit Log, Reports,
+    // + creating/editing/deleting customers, + deleting products
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::resource('users', UserController::class)->except(['show']);
         Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
 
         Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
